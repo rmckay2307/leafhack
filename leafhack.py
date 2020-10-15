@@ -1,18 +1,43 @@
 #this is the leafhack program
 import can
-can.rc['interface'] = 'socketcan'
-can.rc['channel'] = 'can0'
-can.rc['bitrate'] = 500000
-from can.interfaces.interface import Bus
 
-bus = Bus()
+bus = can.Bus(interface='socketcan',channel='can0')
 
-class can.Notifier(can0, <listeners>, timeout=1.0, loop=None)  #TODO need to build list of listeners and fill it in here
+CAR = {"voltage": 372, "speed": 608, "tachometer": 1549}
 
-can.Notifier.add_bus(can0)
+def cellvoltage(SingleCanFrame, MyDB):
+    #convert data
+    #save to DB table 1
+    print("cellvoltage called", SingleCanFrame)
 
-can.Notifier.stop(10) #TODO need to add this to the shutdown sequence
+def packcurrent(SingleCanFrame, MyDB):
+    #convert data
+    #save to DB table 2
+    print("packcurrent called", SingleCanFrame)
 
-can.BusABC(can0, <can_filters=None, **kwargs) #TODO can I remove "**kwargs"?
+def tachometer(SingleCanFrame, MyDB):
+    #convert data
+    #save to DB table 3
+    print("tachometer called", SingleCanFrame)
 
-#added after new SSH key
+def parse_data(can):
+    SingleCanFrame = can.Message
+    MyDB = 1
+    print(SingleCanFrame.arbitration_id)
+
+    if SingleCanFrame.arbitration_id == CAR["voltage"]: #car voltage
+        cellvoltage(SingleCanFrame, MyDB)
+
+    elif SingleCanFrame.arbitration_id == CAR["speed"]: #car speed
+        packcurrent(SingleCanFrame, MyDB)
+
+    elif SingleCanFrame.arbitration_id == CAR["tachometer"]:    #car tachometer
+        tachometer(SingleCanFrame, MyDB)
+
+    else:
+        print("this is the else statement")
+        #save to DB errorlog
+
+notifier = can.Notifier(bus, [parse_data(can)])
+
+
