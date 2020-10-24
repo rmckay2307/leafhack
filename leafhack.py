@@ -1,43 +1,85 @@
 #this is the leafhack program
 import can
+import struct
 
-bus = can.Bus(interface='socketcan',channel='can0')
+CAR = {"shifter position": 372,   #ID 0x174
+    "speed": 852,                 #ID 0x354
+    "tire pressure": 901,         #ID 0x385
+    "outside temp": 1296          #ID 0x510
+}
 
-CAR = {"voltage": 372, "speed": 608, "tachometer": 1549}
+filters = [
+    {"can_id": CAR["shifter position"], "can_mask": 0x7FF},
+    {"can_id": CAR["speed"], "can_mask": 0x7FF},
+    {"can_id": CAR["tire pressure"], "can_mask": 0x7FF},
+    {"can_id": CAR["outside temp"], "can_mask": 0x7FF},
+]
 
-def cellvoltage(SingleCanFrame, MyDB):
-    #convert data
-    #save to DB table 1
-    print("cellvoltage called", SingleCanFrame)
+bus = can.interface.Bus(channel="can0", bustype="socketcan", can_filters=filters)
 
-def packcurrent(SingleCanFrame, MyDB):
-    #convert data
-    #save to DB table 2
-    print("packcurrent called", SingleCanFrame)
+def shifterposition(SingleCanFrame, MyDB):
 
-def tachometer(SingleCanFrame, MyDB):
+    dummy = struct.unpack('BBBBBBBB', SingleCanFrame.data)
+
+    if dummy[3] == 170:           #0xAA
+      shifter_status = "PARK"
+    elif dummy[3] == 187:         #0xBB
+      shifter_status = "DRIVE"
+    elif dummy[3] == 153:         #0x99
+      shifter_status == "REVERSE"
+    else:
+      shifter_status == "UNKNOWN"
+
+    print("shifter:", shifter_status)
+    #TODO log the shifter status to the log file
+
+def speed(SingleCanFrame, MyDB):
+
+    speed = struct.unpack('BBBBBBBB', SingleCanFrame.data)
+
+    print("speed  :", speed[0])
+    #TODO verify that this is the correct units
+    #TODO log speed to the log file
+
+def tirepressure(SingleCanFrame, MyDB):
     #convert data
     #save to DB table 3
-    print("tachometer called", SingleCanFrame)
+    print("tirepre:", SingleCanFrame.data)
+
+def outsidetemp(SingleCanFrame, MyDB):
+    #convert data
+    #save to DB table 4
+    print("temp   :", SingleCanFrame.data)
 
 def parse_data(can):
-    SingleCanFrame = can.Message
+    SingleCanFrame = can
     MyDB = 1
-    print(SingleCanFrame.arbitration_id)
+    #print("Printing SingleCanFrame.arbitration_id:")
+    #print(SingleCanFrame.arbitration_id)
+    #print("Printing data:")
+    #print(SingleCanFrame.data)
+    #print(SingleCanFrame)
 
-    if SingleCanFrame.arbitration_id == CAR["voltage"]: #car voltage
-        cellvoltage(SingleCanFrame, MyDB)
+    #print("\033c", end="")
+
+    if SingleCanFrame.arbitration_id == CAR["shifter position"]: #car's shifter position
+        shifterposition(SingleCanFrame, MyDB)
 
     elif SingleCanFrame.arbitration_id == CAR["speed"]: #car speed
-        packcurrent(SingleCanFrame, MyDB)
+        speed(SingleCanFrame, MyDB)
 
-    elif SingleCanFrame.arbitration_id == CAR["tachometer"]:    #car tachometer
-        tachometer(SingleCanFrame, MyDB)
+    elif SingleCanFrame.arbitration_id == CAR["tire pressure"]: #tire pressure
+        tirepressure(SingleCanFrame, MyDB)
 
-    else:
-        print("this is the else statement")
+    elif SingleCanFrame.arbitration_id == CAR["outside temp"]: #outside temp
+        outsidetemp(SingleCanFrame, MyDB)
+
+    #else:
+        #print("this is the else statement")
         #save to DB errorlog
 
-notifier = can.Notifier(bus, [parse_data(can)])
+for msg in bus:
+    parse_data(msg)
+
 
 
