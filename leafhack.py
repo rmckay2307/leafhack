@@ -1,3 +1,5 @@
+# latest focus: getting the data to show up as text in a tkinter window. Getting said data to poll automatically and fast.
+
 #this is the leafhack program
 import can
 import struct
@@ -31,6 +33,8 @@ previous_time = 0
 # DEFINE FUNCTIONS
 
 def shifterposition(SingleCanFrame):
+
+    global shifter_status
 
     dummy = struct.unpack('BBBBBBBB', SingleCanFrame.data)
 
@@ -95,12 +99,21 @@ def parse_data(can):
         #print("this is the else statement")
         #save to DB errorlog
 
-def count():
+def poll():
 
-    global counter
+    global speed
+    global outsidetemp
+    global shifter_status
+    global tirepressure
 
-    # Increment counter by 1
-    counter.set(counter.get() + 1)
+    msg = bus.recv(0.1)
+
+    parse_data(msg)
+
+    try:
+        counter.set(shifter_status)
+    except:
+        pass
 
 #####################################################################################################
 # MAIN LOOP
@@ -109,13 +122,18 @@ def count():
 root = tk.Tk()
 root.title("LEAF HACK")
 
+# Maximize Window, bind escape key to quit
+w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+root.geometry("%dx%d+0+0" % (w, h))
+root.bind('<Escape>',lambda e: root.destroy())
+
 # Tkinter variable for holding a counter
 counter = tk.IntVar()
-counter.set(0)
+counter.set("NULL")
 
 # Create Widgets
 label_counter = tk.Label(root, width=70, textvariable=counter)
-button_counter = tk.Button(root, text="Count", command=count)
+button_counter = tk.Button(root, text="Count", command=poll)
 
 # Layout Labels
 label_counter.pack()
